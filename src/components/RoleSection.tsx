@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, isValidElement, cloneElement } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Square, Circle } from 'lucide-react';
 
@@ -48,9 +48,15 @@ interface RoleSectionProps {
   roleName: string;
   roleImage: string;
   contentCards: ContentCard[];
+  /**
+   * Controls the rotation direction for orbiting elements. 'clockwise' = default, 'counterclockwise' = reverse.
+   */
+  rotationDirection?: 'clockwise' | 'counterclockwise';
+  /** optional main icon (overrides roleImage). SVGs should use currentColor for stroke/fill so accentColor applies */
+  mainIcon?: React.ReactNode;
 }
 
-export default function RoleSection({ roleName, roleImage, contentCards }: RoleSectionProps) {
+export default function RoleSection({ roleName, roleImage, contentCards, rotationDirection = 'clockwise', mainIcon }: RoleSectionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   
   const DISPLAY_DURATION = 3500; // 3.5 seconds per card
@@ -93,9 +99,9 @@ export default function RoleSection({ roleName, roleImage, contentCards }: RoleS
               opacity: 0.15
             }}
             animate={{
-              scale: [1, 1.15, 1],
-              rotate: [0, 180, 360]
-            }}
+                  scale: [1, 1.15, 1],
+                  rotate: rotationDirection === 'counterclockwise' ? [0, -180, -360] : [0, 180, 360]
+                }}
             transition={{
               duration: 8 + i * 2,
               repeat: Infinity,
@@ -181,9 +187,9 @@ export default function RoleSection({ roleName, roleImage, contentCards }: RoleS
             }}
           />
           
-          {/* Role Image */}
+          {/* Role Image or mainIcon (if provided) */}
           <motion.div
-            className="relative w-48 h-48 rounded-full overflow-hidden bg-gray-900 border-4"
+            className="relative w-48 h-48 rounded-full overflow-hidden bg-gray-900 border-4 flex items-center justify-center"
             style={{ 
               borderColor: currentCard.accentColor
             }}
@@ -192,11 +198,27 @@ export default function RoleSection({ roleName, roleImage, contentCards }: RoleS
             }}
             transition={{ duration: 0.5 }}
           >
-            <img 
-              src={roleImage} 
-              alt={roleName} 
-              className="w-full h-full object-cover"
-            />
+            {mainIcon ? (
+              // allow SVGs to inherit the accent color via currentColor
+              <div className="flex items-center justify-center w-full h-full" style={{ color: currentCard.accentColor }}>
+                {isValidElement(mainIcon)
+                  ? cloneElement(mainIcon as React.ReactElement, ({
+                      // force a smaller visual size by inline style (overrides svg class size)
+                      style: {
+                        ...(mainIcon as any).props?.style,
+                        width: '56%',
+                        height: '56%',
+                      },
+                    } as any))
+                  : mainIcon}
+              </div>
+            ) : (
+              <img 
+                src={roleImage} 
+                alt={roleName} 
+                className="w-full h-full object-cover"
+              />
+            )}
           </motion.div>
 
           {/* Orbiting task icon or text */}
@@ -212,7 +234,7 @@ export default function RoleSection({ roleName, roleImage, contentCards }: RoleS
               animate={{
                 opacity: 1,
                 scale: 1,
-                rotate: 360
+                rotate: rotationDirection === 'counterclockwise' ? -360 : 360
               }}
               exit={{ opacity: 0, scale: 0 }}
               transition={{
